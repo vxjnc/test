@@ -5,17 +5,17 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { LoadingSpinnerComponent } from '../../components/ui/loading-spinner.component';
-import { MatIcon, MatIconModule } from '@angular/material/icon';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
     selector: 'app-login',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, RouterModule, LoadingSpinnerComponent, MatIcon, MatIconModule],
+    imports: [CommonModule, ReactiveFormsModule, RouterModule, LoadingSpinnerComponent, MatIconModule],
     template: `
    <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div class="sm:mx-auto sm:w-full sm:max-w-md">
         <div class="mx-auto h-12 w-12 text-primary-500 flex items-center justify-center">
-          <mat-icon class="w-8 h-8">account_balance_wallet</mat-icon>
+          <mat-icon>account_balance_wallet</mat-icon>
         </div>
         <h2 class="mt-6 text-center text-3xl font-bold text-gray-900">
           Войдите в GroupCache

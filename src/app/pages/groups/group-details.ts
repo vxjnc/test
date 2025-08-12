@@ -10,14 +10,13 @@ import {
   CategoryInDB, ExpenseCreate, GroupMemberCreate,
   CategoryCreate, ExpenseUpdate, ExpenseShareInput
 } from '../../models/api.models';
-import { MatIcon, MatIconModule } from '@angular/material/icon';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-group-details',
   standalone: true,
   imports: [
     MatIconModule,
-    MatIcon,
     CommonModule,
     ReactiveFormsModule,
     RouterModule,
@@ -38,9 +37,7 @@ import { MatIcon, MatIconModule } from '@angular/material/icon';
                 (click)="showMemberModal = true"
                 class="btn-primary"
               >
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                </svg>
+                <mat-icon class="mr-2">add</mat-icon>
                 Добавить участника
               </button>
 
@@ -48,9 +45,7 @@ import { MatIcon, MatIconModule } from '@angular/material/icon';
                 (click)="showCategoryModal = true"
                 class="btn-secondary"
               >
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                </svg>
+                <mat-icon class="mr-2">category</mat-icon>
                 Добавить категорию
               </button>
             </div>
@@ -91,9 +86,7 @@ import { MatIcon, MatIconModule } from '@angular/material/icon';
               class="text-red-500 hover:text-red-700"
               title="Удалить"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-              </svg>
+              <mat-icon>delete</mat-icon>
             </button>
           </div>
         }
@@ -108,9 +101,7 @@ import { MatIcon, MatIconModule } from '@angular/material/icon';
                     (click)="showExpenseModal = true; initExpenseForm()"
                     class="btn-primary"
                   >
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                    </svg>
+                    <mat-icon class="mr-2">add</mat-icon>
                     Добавить расход
                   </button>
                 </div>
@@ -195,7 +186,7 @@ import { MatIcon, MatIconModule } from '@angular/material/icon';
                 @for (category of categories(); track category.id) {
                   <div class="card p-4 flex items-center">
                     <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
-                        <mat-icon class="mr-1 w-4 h-4">{{category.icon}}</mat-icon>
+                        <mat-icon>{{category.icon}}</mat-icon>
                     </div>
                     <span>{{ category.name }}</span>
                   </div>

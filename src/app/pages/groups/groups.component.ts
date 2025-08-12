@@ -6,11 +6,12 @@ import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { GroupInDB } from '../../models/api.models';
 import { LoadingSpinnerComponent } from '../../components/ui/loading-spinner.component';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
     selector: 'app-groups',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, RouterModule, LoadingSpinnerComponent],
+    imports: [CommonModule, ReactiveFormsModule, RouterModule, LoadingSpinnerComponent, MatIconModule],
     template: `
     <div class="min-h-screen bg-gray-50">
       <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -26,9 +27,7 @@ import { LoadingSpinnerComponent } from '../../components/ui/loading-spinner.com
               (click)="showCreateModal = true"
               class="btn-primary"
             >
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-              </svg>
+              <mat-icon class="mr-2">add</mat-icon>
               Создать группу
             </button>
           </div>
@@ -40,9 +39,7 @@ import { LoadingSpinnerComponent } from '../../components/ui/loading-spinner.com
           } @else {
             @if (groups().length === 0) {
               <div class="text-center py-12">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                </svg>
+                <mat-icon class="mx-auto text-gray-400 text-6xl">group</mat-icon>
                 <h3 class="mt-2 text-sm font-medium text-gray-900">Нет групп</h3>
                 <p class="mt-1 text-sm text-gray-500">Начните с создания своей первой группы для отслеживания расходов.</p>
                 <div class="mt-6">
@@ -50,9 +47,7 @@ import { LoadingSpinnerComponent } from '../../components/ui/loading-spinner.com
                     (click)="showCreateModal = true"
                     class="btn-primary"
                   >
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                    </svg>
+                    <mat-icon class="mr-2">add</mat-icon>
                     Создать первую группу
                   </button>
                 </div>
@@ -73,13 +68,9 @@ import { LoadingSpinnerComponent } from '../../components/ui/loading-spinner.com
                           class="text-gray-400 hover:text-gray-600"
                           title="Редактировать"
                         >
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                          </svg>
+                          <mat-icon>edit</mat-icon>
                         </button>
-                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
+                        <mat-icon class="text-gray-400">chevron_right</mat-icon>
                       </div>
                     </div>
                   </div>

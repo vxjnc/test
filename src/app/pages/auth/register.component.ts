@@ -5,18 +5,17 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { LoadingSpinnerComponent } from '../../components/ui/loading-spinner.component';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
     selector: 'app-register',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, RouterModule, LoadingSpinnerComponent],
+    imports: [CommonModule, ReactiveFormsModule, RouterModule, LoadingSpinnerComponent, MatIconModule],
     template: `
     <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div class="sm:mx-auto sm:w-full sm:max-w-md">
         <div class="mx-auto h-12 w-12 text-primary-500 flex items-center justify-center">
-          <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/>
-          </svg>
+          <mat-icon>account_balance_wallet</mat-icon>
         </div>
         <h2 class="mt-6 text-center text-3xl font-bold text-gray-900">
           Создать аккаунт

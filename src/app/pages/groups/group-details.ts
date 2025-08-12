@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -11,6 +12,9 @@ import {
   CategoryCreate, ExpenseUpdate, ExpenseShareInput
 } from '../../models/api.models';
 import { MatIconModule } from '@angular/material/icon';
+import { Chart, ChartConfiguration, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-group-details',
@@ -175,6 +179,21 @@ import { MatIconModule } from '@angular/material/icon';
                       </div>
                     }
                   }
+                </div>
+              </div>
+              
+              <!-- Графики расходов -->
+              <div class="card lg:col-span-3 mt-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Аналитика расходов</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Расходы по категориям</h3>
+                    <canvas #categoryChart width="400" height="200"></canvas>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Расходы по времени</h3>
+                    <canvas #timeChart width="400" height="200"></canvas>
+                  </div>
                 </div>
               </div>
             </div>
@@ -452,7 +471,13 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   `
 })
-export class GroupDetailsComponent implements OnInit {
+export class GroupDetailsComponent implements OnInit, AfterViewInit {
+  @ViewChild('categoryChart', { static: false }) categoryChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('timeChart', { static: false }) timeChartRef!: ElementRef<HTMLCanvasElement>;
+
+  private categoryChart: Chart | null = null;
+  private timeChart: Chart | null = null;
+
   loading = signal(true);
   groupId: string | null = null;
   group = signal<GroupInDB | null>(null);
@@ -542,6 +567,10 @@ export class GroupDetailsComponent implements OnInit {
     }
   }
 
+  ngAfterViewInit(): void {
+    // Charts will be initialized after data is loaded
+  }
+
   private async loadGroupData(): Promise<void> {
     if (!this.groupId) return;
 
@@ -559,6 +588,11 @@ export class GroupDetailsComponent implements OnInit {
       // Загрузка категорий
       const categories = await this.apiService.getGroupCategories(this.groupId).toPromise();
       this.categories.set(categories || []);
+
+      // Initialize charts after data is loaded
+      setTimeout(() => {
+        this.initializeCharts();
+      }, 100);
 
     }
     catch (error) {
@@ -580,7 +614,7 @@ export class GroupDetailsComponent implements OnInit {
       this.expenseForm.patchValue({
         amount: expense.amount,
         description: expense.description || '',
-        created_at: expense.created_at,
+        created_at: new Date(expense.created_at).toISOString().split('T')[0],
         category_id: expense.category_id || ''
       });
 
@@ -594,21 +628,11 @@ export class GroupDetailsComponent implements OnInit {
           is_paid: [share?.is_paid || false]
         }));
       });
-
-      this.members().forEach(member => {
-        const share = expense.shares.find(s => s.member_id === member.id);
-        sharesArray.push(this.fb.group({
-          member_id: [member.id],
-          is_included: [share ? true : false], // Используем is_included
-          share: [share?.share || null],
-          is_paid: [share?.is_paid || false]
-        }));
-      });
     }
     else {
       // Для нового расхода
       this.expenseForm.patchValue({
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString().split('T')[0]
       });
 
       // Инициализация долей участников
@@ -775,7 +799,7 @@ export class GroupDetailsComponent implements OnInit {
       const expenseData: ExpenseUpdate = {
         amount: this.expenseForm.value.amount,
         description: this.expenseForm.value.description || null,
-        created_at: new Date(this.expenseForm.value.created_at).toISOString(),
+        created_at: new Date(this.expenseForm.value.created_at + 'T00:00:00').toISOString(),
         category_id: this.expenseForm.value.category_id || null,
         shares: shares
       };
@@ -792,6 +816,7 @@ export class GroupDetailsComponent implements OnInit {
             expenses.map(e => e.id === this.editingExpense?.id ? updatedExpense : e)
           );
           this.toast.success('Расход успешно обновлен');
+          this.initializeCharts(); // Обновляем графики
           this.closeExpenseModal();
         }
       }
@@ -839,5 +864,166 @@ export class GroupDetailsComponent implements OnInit {
     this.showExpenseModal = false;
     this.expenseForm.reset();
     this.editingExpense = null;
+  }
+
+  private initializeCharts(): void {
+    if (this.categoryChartRef && this.timeChartRef) {
+      this.createCategoryChart();
+      this.createTimeChart();
+    }
+  }
+
+  private createCategoryChart(): void {
+    const ctx = this.categoryChartRef.nativeElement.getContext('2d');
+    if (!ctx) return;
+
+    // Destroy existing chart
+    if (this.categoryChart) {
+      this.categoryChart.destroy();
+    }
+
+    // Calculate expenses by category
+    const categoryExpenses = new Map<string, number>();
+    const categoryColors = new Map<string, string>();
+    
+    // Initialize with categories
+    this.categories().forEach(category => {
+      categoryExpenses.set(category.name, 0);
+      categoryColors.set(category.name, this.getRandomColor());
+    });
+    
+    // Add uncategorized
+    categoryExpenses.set('Без категории', 0);
+    categoryColors.set('Без категории', '#9CA3AF');
+
+    // Sum expenses by category
+    this.expenses().forEach(expense => {
+      if (expense.category_id) {
+        const categoryName = this.getCategoryName(expense.category_id);
+        const current = categoryExpenses.get(categoryName) || 0;
+        categoryExpenses.set(categoryName, current + expense.amount);
+      } else {
+        const current = categoryExpenses.get('Без категории') || 0;
+        categoryExpenses.set('Без категории', current + expense.amount);
+      }
+    });
+
+    // Filter out zero values
+    const filteredEntries = Array.from(categoryExpenses.entries()).filter(([, amount]) => amount > 0);
+
+    const config: ChartConfiguration = {
+      type: 'doughnut',
+      data: {
+        labels: filteredEntries.map(([name]) => name),
+        datasets: [{
+          data: filteredEntries.map(([, amount]) => amount),
+          backgroundColor: filteredEntries.map(([name]) => categoryColors.get(name) || '#9CA3AF'),
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const value = context.parsed;
+                return `${context.label}: ₽${value.toLocaleString()}`;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    this.categoryChart = new Chart(ctx, config);
+  }
+
+  private createTimeChart(): void {
+    const ctx = this.timeChartRef.nativeElement.getContext('2d');
+    if (!ctx) return;
+
+    // Destroy existing chart
+    if (this.timeChart) {
+      this.timeChart.destroy();
+    }
+
+    // Group expenses by month
+    const monthlyExpenses = new Map<string, number>();
+    
+    this.expenses().forEach(expense => {
+      const date = new Date(expense.created_at);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const current = monthlyExpenses.get(monthKey) || 0;
+      monthlyExpenses.set(monthKey, current + expense.amount);
+    });
+
+    // Sort by date and get last 6 months
+    const sortedEntries = Array.from(monthlyExpenses.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6);
+
+    const config: ChartConfiguration = {
+      type: 'line',
+      data: {
+        labels: sortedEntries.map(([monthKey]) => {
+          const [year, month] = monthKey.split('-');
+          return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('ru-RU', { 
+            month: 'short', 
+            year: 'numeric' 
+          });
+        }),
+        datasets: [{
+          label: 'Расходы (₽)',
+          data: sortedEntries.map(([, amount]) => amount),
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                return `Расходы: ₽${context.parsed.y.toLocaleString()}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '₽' + Number(value).toLocaleString();
+              }
+            }
+          }
+        }
+      }
+    };
+
+    this.timeChart = new Chart(ctx, config);
+  }
+
+  private getRandomColor(): string {
+    const colors = [
+      '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+      '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
   }
 }

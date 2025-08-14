@@ -20,7 +20,7 @@ import { ToastService } from '../../services/toast.service';
       @for (toast of toastService.getToasts(); track toast.id) {
         <app-toast 
           [toast]="toast" 
-          (onClose)="toastService.remove(toast.id)"
+          (eventClose)="toastService.remove(toast.id)"
         />
       }
     </div>

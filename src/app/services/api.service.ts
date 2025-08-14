@@ -3,11 +3,12 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
-    UserInDB, UserCreate, Token,
+    UserInDB, UserCreate, UserUpdate, Token,
     GroupInDB, GroupCreate, GroupUpdate,
     GroupMemberInDB, GroupMemberCreate,
     ExpenseInDB, ExpenseCreate, ExpenseUpdate, ExpenseShareUpdate,
-    CategoryInDB, CategoryCreate
+    CategoryInDB, CategoryCreate,
+    SubscriptionInDB, SubscriptionCreate
 } from '../models/api.models';
 
 @Injectable({
@@ -61,6 +62,17 @@ export class ApiService {
             .pipe(catchError(this.handleError));
     }
 
+    // User endpoints
+    getUser(userId: string): Observable<UserInDB> {
+        return this.http.get<UserInDB>(`${this.API_BASE}/api/users/${userId}`, { headers: this.getHeaders() })
+            .pipe(catchError(this.handleError));
+    }
+
+    updateUser(userId: string, userData: UserUpdate): Observable<UserInDB> {
+        return this.http.put<UserInDB>(`${this.API_BASE}/api/users/${userId}`, userData, { headers: this.getHeaders() })
+            .pipe(catchError(this.handleError));
+    }
+
     // Group endpoints
     getGroups(): Observable<GroupInDB[]> {
         return this.http.get<GroupInDB[]>(`${this.API_BASE}/api/groups/`, { headers: this.getHeaders() })
@@ -94,7 +106,6 @@ export class ApiService {
     }
 
     removeGroupMember(groupId: string, memberId: number): Observable<void> {
-        // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
         return this.http.delete<void>(`${this.API_BASE}/api/groups/${groupId}/members/${memberId}`, { headers: this.getHeaders() })
             .pipe(catchError(this.handleError));
     }
@@ -143,5 +154,11 @@ export class ApiService {
             categoryData,
             { headers: this.getHeaders() }
         ).pipe(catchError(this.handleError));
+    }
+
+    // Subscription endpoints
+    createSubscription(subscriptionData: SubscriptionCreate): Observable<SubscriptionInDB> {
+        return this.http.post<SubscriptionInDB>(`${this.API_BASE}/api/subscriptions/`, subscriptionData, { headers: this.getHeaders() })
+            .pipe(catchError(this.handleError));
     }
 }

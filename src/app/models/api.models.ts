@@ -98,12 +98,28 @@ export interface CategoryInDB {
     id: number;
     name: string;
     icon: string;
+    color: string;
     is_default: boolean;
 }
 
 export interface CategoryCreate {
     name: string;
     icon?: string;
+    color?: string;
+    group_id: string;
+}
+
+export interface SubscriptionInDB {
+    id: number;
+    plan: string;
+    start_date: string;
+    end_date: string;
+    group_id: string;
+}
+
+export interface SubscriptionCreate {
+    plan: string;
+    end_date: string;
     group_id: string;
 }
 

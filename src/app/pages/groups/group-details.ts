@@ -1,4 +1,3 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Component, computed, inject, OnInit, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
@@ -62,40 +61,41 @@ Chart.register(...registerables);
           } @else {
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <!-- Участники группы -->
-                  <div class="card lg:col-span-1">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Участники</h2>
-      <div class="space-y-3">
-        @for (member of members(); track member.id) {
-          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div>
-              <h3 class="text-sm font-medium text-gray-900">
-                {{ member.name || 'Без имени' }}
-              </h3>
-              <p class="text-xs text-gray-500">
-                {{ member.is_admin ? 'Администратор' : 'Участник' }}
-              </p>
-            </div>
-            <div class="text-right">
-              <p class="text-sm font-medium"
-                 [class.text-red-600]="getMemberDebt(member.id) > 0"
-                 [class.text-gray-600]="getMemberDebt(member.id) === 0">
-                {{ getMemberDebt(member.id) | number:'1.2-2' }} ₽
-              </p>
-              <p class="text-xs text-gray-500">
-                {{ getMemberDebt(member.id) > 0 ? 'Долг' : 'Нет долга' }}
-              </p>
-            </div>
-            <button
-              (click)="removeMember(member.id, $event)"
-              class="text-red-500 hover:text-red-700"
-              title="Удалить"
-            >
-              <mat-icon>delete</mat-icon>
-            </button>
-          </div>
-        }
-      </div>
-    </div>
+              <div class="card lg:col-span-1">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Участники</h2>
+                <div class="space-y-3">
+                  @for (member of members(); track member.id) {
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <h3 class="text-sm font-medium text-gray-900">
+                          {{ member.name || 'Без имени' }}
+                        </h3>
+                        <p class="text-xs text-gray-500">
+                          {{ member.is_admin ? 'Администратор' : 'Участник' }}
+                        </p>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-sm font-medium"
+                           [class.text-red-600]="getMemberDebt(member.id) > 0"
+                           [class.text-green-600]="getMemberDebt(member.id) < 0"
+                           [class.text-gray-600]="getMemberDebt(member.id) === 0">
+                          {{ getMemberDebt(member.id) | number:'1.2-2' }} ₽
+                        </p>
+                        <p class="text-xs text-gray-500">
+                          {{ getMemberDebt(member.id) > 0 ? 'Долг' : getMemberDebt(member.id) < 0 ? 'Переплата' : 'Нет долга' }}
+                        </p>
+                      </div>
+                      <button
+                        (click)="removeMember(member.id, $event)"
+                        class="text-red-500 hover:text-red-700 ml-2"
+                        title="Удалить"
+                      >
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
 
               <!-- Расходы группы -->
               <div class="card lg:col-span-2">
@@ -109,7 +109,7 @@ Chart.register(...registerables);
                     Добавить расход
                   </button>
                 </div>
-                <div class="space-y-3">
+                <div class="space-y-3 max-h-96 overflow-y-auto">
                   @if (expenses().length === 0) {
                     <div class="text-center py-6 text-gray-500">
                       <p>Расходов пока нет</p>
@@ -124,9 +124,12 @@ Chart.register(...registerables);
                               {{ expense.description || 'Без описания' }}
                             </h3>
                             <p class="text-xs text-gray-500">
-                              {{ expense.created_at }}
+                              {{ formatDate(expense.created_at) }}
                               @if (expense.category_id) {
-                                <span class="ml-2 px-2 py-1 bg-gray-200 rounded-full">
+                                <span class="ml-2 px-2 py-1 rounded-full text-xs"
+                                      [style.background-color]="getCategoryColor(expense.category_id)"
+                                      [style.color]="getContrastColor(getCategoryColor(expense.category_id))">
+                                  <mat-icon class="text-xs mr-1">{{ getCategoryIcon(expense.category_id) }}</mat-icon>
                                   {{ getCategoryName(expense.category_id) }}
                                 </span>
                               }
@@ -136,10 +139,12 @@ Chart.register(...registerables);
                             <p class="text-sm font-medium text-gray-900">₽{{ expense.amount.toLocaleString() }}</p>
                             @if (expense.is_settled) {
                               <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                <mat-icon class="mr-1 text-xs">check_circle</mat-icon>
                                 Погашено
                               </span>
                             } @else {
                               <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                                <mat-icon class="mr-1 text-xs">schedule</mat-icon>
                                 Активно
                               </span>
                             }
@@ -164,12 +169,17 @@ Chart.register(...registerables);
                                 <div>
                                   @if (share.is_paid) {
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                      <mat-icon class="mr-1 text-xs">check</mat-icon>
                                       Оплачено
                                     </span>
                                   } @else {
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                                      Ожидает оплаты
-                                    </span>
+                                    <button
+                                      (click)="toggleSharePayment(expense.id, share.member_id, !share.is_paid, $event)"
+                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+                                    >
+                                      <mat-icon class="mr-1 text-xs">schedule</mat-icon>
+                                      Отметить оплату
+                                    </button>
                                   }
                                 </div>
                               </div>
@@ -181,18 +191,22 @@ Chart.register(...registerables);
                   }
                 </div>
               </div>
-              
-              <!-- Графики расходов -->
-              <div class="card lg:col-span-3 mt-6">
-                <h2 class="text-lg font-medium text-gray-900 mb-4">Аналитика расходов</h2>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <h3 class="text-sm font-medium text-gray-700 mb-2">Расходы по категориям</h3>
-                    <canvas #categoryChart width="400" height="200"></canvas>
+            </div>
+            
+            <!-- Графики расходов -->
+            <div class="card mt-6">
+              <h2 class="text-lg font-medium text-gray-900 mb-4">Аналитика расходов</h2>
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">Расходы по категориям</h3>
+                  <div class="h-64">
+                    <canvas #categoryChart></canvas>
                   </div>
-                  <div>
-                    <h3 class="text-sm font-medium text-gray-700 mb-2">Расходы по времени</h3>
-                    <canvas #timeChart width="400" height="200"></canvas>
+                </div>
+                <div>
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">Расходы по времени</h3>
+                  <div class="h-64">
+                    <canvas #timeChart></canvas>
                   </div>
                 </div>
               </div>
@@ -201,13 +215,15 @@ Chart.register(...registerables);
             <!-- Категории группы -->
             <div class="mt-8">
               <h2 class="text-lg font-medium text-gray-900 mb-4">Категории</h2>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 @for (category of categories(); track category.id) {
-                  <div class="card p-4 flex items-center">
-                    <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
-                        <mat-icon>{{category.icon}}</mat-icon>
+                  <div class="card p-4 flex items-center justify-center flex-col text-center"
+                       [style.background-color]="category.color + '20'">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center mb-2"
+                         [style.background-color]="category.color">
+                      <mat-icon class="text-white text-sm">{{ category.icon }}</mat-icon>
                     </div>
-                    <span>{{ category.name }}</span>
+                    <span class="text-sm font-medium">{{ category.name }}</span>
                   </div>
                 }
               </div>
@@ -293,12 +309,42 @@ Chart.register(...registerables);
                     </div>
                     <div class="mb-4">
                       <label for="categoryIcon" class="form-label">Иконка</label>
-                      <input
+                      <select
                         id="categoryIcon"
-                        type="text"
                         formControlName="icon"
                         class="form-input"
-                        placeholder="Введите иконку (например, 🍔)"
+                      >
+                        <option value="receipt">receipt - Чек</option>
+                        <option value="restaurant">restaurant - Еда</option>
+                        <option value="local_gas_station">local_gas_station - Топливо</option>
+                        <option value="shopping_cart">shopping_cart - Покупки</option>
+                        <option value="home">home - Дом</option>
+                        <option value="medical_services">medical_services - Медицина</option>
+                        <option value="school">school - Образование</option>
+                        <option value="sports_esports">sports_esports - Развлечения</option>
+                        <option value="directions_car">directions_car - Транспорт</option>
+                        <option value="phone">phone - Связь</option>
+                      </select>
+                    </div>
+                    <div class="mb-4">
+                      <label for="categoryColor" class="form-label">Цвет</label>
+                      <div class="flex space-x-2 mb-2">
+                        @for (color of predefinedColors; track color) {
+                          <button
+                            type="button"
+                            (click)="categoryForm.patchValue({color: color})"
+                            class="w-8 h-8 rounded-full border-2"
+                            [style.background-color]="color"
+                            [class.border-gray-800]="categoryForm.value.color === color"
+                            [class.border-gray-300]="categoryForm.value.color !== color"
+                          ></button>
+                        }
+                      </div>
+                      <input
+                        id="categoryColor"
+                        type="color"
+                        formControlName="color"
+                        class="form-input h-10"
                       />
                     </div>
                     <div class="flex justify-end space-x-3">
@@ -330,25 +376,40 @@ Chart.register(...registerables);
           <!-- Модальное окно добавления/редактирования расхода -->
           @if (showExpenseModal) {
             <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-              <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
                 <div class="mt-3">
                   <h3 class="text-lg font-medium text-gray-900 mb-4">
                     {{ editingExpense ? 'Редактировать расход' : 'Добавить расход' }}
                   </h3>
                   <form [formGroup]="expenseForm" (ngSubmit)="editingExpense ? updateExpense() : addExpense()">
-                    <div class="mb-4">
-                      <label for="expenseAmount" class="form-label">Сумма (₽)</label>
-                      <input
-                        id="expenseAmount"
-                        type="number"
-                        step="0.01"
-                        formControlName="amount"
-                        class="form-input"
-                        placeholder="0.00"
-                      />
-                      @if (expenseForm.get('amount')?.touched && expenseForm.get('amount')?.errors) {
-                        <p class="mt-1 text-sm text-red-600">Введите корректную сумму</p>
-                      }
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label for="expenseAmount" class="form-label">Сумма (₽)</label>
+                        <input
+                          id="expenseAmount"
+                          type="number"
+                          step="0.01"
+                          formControlName="amount"
+                          class="form-input"
+                          placeholder="0.00"
+                        />
+                        @if (expenseForm.get('amount')?.touched && expenseForm.get('amount')?.errors) {
+                          <p class="mt-1 text-sm text-red-600">Введите корректную сумму</p>
+                        }
+                      </div>
+
+                      <div>
+                        <label for="expenseDate" class="form-label">Дата расхода</label>
+                        <input
+                          id="expenseDate"
+                          type="date"
+                          formControlName="created_at"
+                          class="form-input"
+                        />
+                        @if (expenseForm.get('created_at')?.touched && expenseForm.get('created_at')?.errors) {
+                          <p class="mt-1 text-sm text-red-600">Выберите дату</p>
+                        }
+                      </div>
                     </div>
 
                     <div class="mb-4">
@@ -360,19 +421,6 @@ Chart.register(...registerables);
                         class="form-input"
                         placeholder="На что потрачено?"
                       />
-                    </div>
-
-                    <div class="mb-4">
-                      <label for="expenseDate" class="form-label">Дата расхода</label>
-                      <input
-                        id="expenseDate"
-                        type="date"
-                        formControlName="created_at"
-                        class="form-input"
-                      />
-                      @if (expenseForm.get('created_at')?.touched && expenseForm.get('created_at')?.errors) {
-                        <p class="mt-1 text-sm text-red-600">Выберите дату</p>
-                      }
                     </div>
 
                     <div class="mb-4">
@@ -391,7 +439,7 @@ Chart.register(...registerables);
 
                     <div class="mb-4">
                       <label class="form-label">Участники и доли</label>
-                      <div class="space-y-3">
+                      <div class="space-y-3 max-h-60 overflow-y-auto">
                         @for (member of members(); track member.id; let i = $index) {
                           <div class="card p-3">
                             <div class="flex items-center mb-2">
@@ -406,33 +454,35 @@ Chart.register(...registerables);
                               </label>
                             </div>
                             
-                            <div class="ml-6 space-y-2">
-                              <!-- <div>
-                                <label [for]="'shareAmount'+i" class="block text-sm text-gray-500 mb-1">
-                                  Доля (₽)
-                                </label>
-                                <input
-                                  [id]="'shareAmount'+i"
-                                  type="number"
-                                  step="0.01"
-                                  [formControl]="getShareControl(i, 'share')"
-                                  class="form-input w-full"
-                                  placeholder="0.00"
-                                />
-                              </div> -->
-                              
-                              <div class="flex items-center">
-                                <input
-                                  [id]="'isPaid'+i"
-                                  type="checkbox"
-                                  [formControl]="getShareControl(i, 'is_paid')"
-                                  class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                                />
-                                <label [for]="'isPaid'+i" class="ml-2 block text-sm text-gray-500">
-                                  Оплачено
-                                </label>
+                            @if (getShareControl(i, 'is_included').value) {
+                              <div class="ml-6 space-y-2">
+                                <div>
+                                  <label [for]="'shareAmount'+i" class="block text-sm text-gray-500 mb-1">
+                                    Доля (₽) - оставьте пустым для равного деления
+                                  </label>
+                                  <input
+                                    [id]="'shareAmount'+i"
+                                    type="number"
+                                    step="0.01"
+                                    [formControl]="getShareControl(i, 'share')"
+                                    class="form-input w-full"
+                                    placeholder="Автоматически"
+                                  />
+                                </div>
+                                
+                                <div class="flex items-center">
+                                  <input
+                                    [id]="'isPaid'+i"
+                                    type="checkbox"
+                                    [formControl]="getShareControl(i, 'is_paid')"
+                                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                  />
+                                  <label [for]="'isPaid'+i" class="ml-2 block text-sm text-gray-500">
+                                    Уже оплачено
+                                  </label>
+                                </div>
                               </div>
-                            </div>
+                            }
                           </div>
                         }
                       </div>
@@ -497,13 +547,17 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
   categoryForm: FormGroup;
   expenseForm: FormGroup;
 
+  predefinedColors = [
+    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+    '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
+  ];
+
   private route = inject(ActivatedRoute);
   private apiService = inject(ApiService);
   private toast = inject(ToastService);
   private fb = inject(FormBuilder);
 
-  constructor(
-  ) {
+  constructor() {
     // Форма для добавления участника
     this.memberForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -513,14 +567,15 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
     // Форма для добавления категории
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(50)]],
-      icon: ['receipt']
+      icon: ['receipt'],
+      color: ['#3B82F6']
     });
 
     // Форма для добавления расхода
     this.expenseForm = this.fb.group({
       amount: ['', [Validators.required, Validators.min(0.01)]],
       description: ['', [Validators.maxLength(255)]],
-      created_at: [new Date().toISOString(), [Validators.required]],
+      created_at: [new Date().toISOString().split('T')[0], [Validators.required]],
       category_id: [''],
       shares: this.fb.array([])
     });
@@ -535,6 +590,7 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
     // Рассчитываем долги на основе расходов
     this.expenses().forEach(expense => {
       const totalShares = expense.shares.length;
+      const totalCustomShares = expense.shares.reduce((sum, share) => sum + (share.share || 0), 0);
 
       expense.shares.forEach(share => {
         if (!share.is_paid) {
@@ -544,9 +600,11 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
           if (share.share && share.share > 0) {
             shareAmount = share.share;
           }
-          // Если сумма не указана, делим поровну
+          // Если сумма не указана, делим поровну оставшуюся сумму
           else if (totalShares > 0) {
-            shareAmount = expense.amount / totalShares;
+            const remainingAmount = expense.amount - totalCustomShares;
+            const sharesWithoutCustomAmount = expense.shares.filter(s => !s.share || s.share === 0).length;
+            shareAmount = sharesWithoutCustomAmount > 0 ? remainingAmount / sharesWithoutCustomAmount : 0;
           }
 
           // Добавляем к текущему долгу участника
@@ -558,7 +616,6 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
 
     return debts;
   });
-
 
   ngOnInit(): void {
     this.groupId = this.route.snapshot.paramMap.get('groupId');
@@ -594,12 +651,10 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
         this.initializeCharts();
       }, 100);
 
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Failed to load group data:', error);
       this.toast.error('Ошибка загрузки данных группы');
-    }
-    finally {
+    } finally {
       this.loading.set(false);
     }
   }
@@ -614,7 +669,7 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
       this.expenseForm.patchValue({
         amount: expense.amount,
         description: expense.description || '',
-        created_at: new Date(expense.created_at).toISOString().split('T')[0],
+        created_at: expense.created_at,
         category_id: expense.category_id || ''
       });
 
@@ -628,8 +683,7 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
           is_paid: [share?.is_paid || false]
         }));
       });
-    }
-    else {
+    } else {
       // Для нового расхода
       this.expenseForm.patchValue({
         created_at: new Date().toISOString().split('T')[0]
@@ -670,12 +724,10 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
           this.toast.success('Участник успешно добавлен');
           this.closeMemberModal();
         }
-      }
-      catch (error) {
+      } catch (error) {
         console.error('Failed to add member:', error);
         this.toast.error('Ошибка добавления участника');
-      }
-      finally {
+      } finally {
         this.submittingMember.set(false);
       }
     }
@@ -694,8 +746,7 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
       await this.apiService.removeGroupMember(this.groupId, memberId).toPromise();
       this.members.update(members => members.filter(m => m.id !== memberId));
       this.toast.success('Участник удален');
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Failed to remove member:', error);
       this.toast.error('Ошибка удаления участника');
     }
@@ -708,6 +759,7 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
       const categoryData: CategoryCreate = {
         name: this.categoryForm.value.name,
         icon: this.categoryForm.value.icon,
+        color: this.categoryForm.value.color,
         group_id: this.groupId
       };
 
@@ -718,12 +770,10 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
           this.toast.success('Категория успешно добавлена');
           this.closeCategoryModal();
         }
-      }
-      catch (error) {
+      } catch (error) {
         console.error('Failed to add category:', error);
         this.toast.error('Ошибка добавления категории');
-      }
-      finally {
+      } finally {
         this.submittingCategory.set(false);
       }
     }
@@ -752,7 +802,7 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
       const expenseData: ExpenseCreate = {
         amount: this.expenseForm.value.amount,
         description: this.expenseForm.value.description || null,
-        created_at: new Date(this.expenseForm.value.created_at).toISOString(),
+        created_at: this.expenseForm.value.created_at,
         category_id: this.expenseForm.value.category_id || null,
         group_id: this.groupId,
         shares: shares
@@ -763,14 +813,13 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
         if (newExpense) {
           this.expenses.update(expenses => [...expenses, newExpense]);
           this.toast.success('Расход успешно добавлен');
+          this.initializeCharts();
           this.closeExpenseModal();
         }
-      }
-      catch (error) {
+      } catch (error) {
         console.error('Failed to create expense:', error);
         this.toast.error('Ошибка добавления расхода');
-      }
-      finally {
+      } finally {
         this.submittingExpense.set(false);
       }
     }
@@ -799,7 +848,7 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
       const expenseData: ExpenseUpdate = {
         amount: this.expenseForm.value.amount,
         description: this.expenseForm.value.description || null,
-        created_at: new Date(this.expenseForm.value.created_at + 'T00:00:00').toISOString(),
+        created_at: this.expenseForm.value.created_at,
         category_id: this.expenseForm.value.category_id || null,
         shares: shares
       };
@@ -816,17 +865,40 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
             expenses.map(e => e.id === this.editingExpense?.id ? updatedExpense : e)
           );
           this.toast.success('Расход успешно обновлен');
-          this.initializeCharts(); // Обновляем графики
+          this.initializeCharts();
           this.closeExpenseModal();
         }
-      }
-      catch (error) {
+      } catch (error) {
         console.error('Failed to update expense:', error);
         this.toast.error('Ошибка обновления расхода');
-      }
-      finally {
+      } finally {
         this.submittingExpense.set(false);
       }
+    }
+  }
+
+  // Переключение статуса оплаты доли
+  async toggleSharePayment(expenseId: string, memberId: number, isPaid: boolean, event: Event): Promise<void> {
+    event.stopPropagation();
+    if (!this.groupId) return;
+
+    try {
+      const updatedExpense = await this.apiService.updateExpenseShare(
+        this.groupId,
+        expenseId,
+        memberId,
+        { member_id: memberId, is_paid: isPaid, share: null }
+      ).toPromise();
+
+      if (updatedExpense) {
+        this.expenses.update(expenses =>
+          expenses.map(e => e.id === expenseId ? updatedExpense : e)
+        );
+        this.toast.success(isPaid ? 'Оплата отмечена' : 'Оплата отменена');
+      }
+    } catch (error) {
+      console.error('Failed to update share payment:', error);
+      this.toast.error('Ошибка обновления статуса оплаты');
     }
   }
 
@@ -836,10 +908,47 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
     return category ? category.name : 'Неизвестная категория';
   }
 
+  // Получение иконки категории по ID
+  getCategoryIcon(categoryId: number): string {
+    const category = this.categories().find(c => c.id === categoryId);
+    return category ? category.icon : 'receipt';
+  }
+
+  // Получение цвета категории по ID
+  getCategoryColor(categoryId: number): string {
+    const category = this.categories().find(c => c.id === categoryId);
+    return category ? category.color : '#cccccc';
+  }
+
+  // Получение контрастного цвета для текста
+  getContrastColor(hexColor: string): string {
+    // Удаляем # если есть
+    const color = hexColor.replace('#', '');
+    
+    // Конвертируем в RGB
+    const r = parseInt(color.substr(0, 2), 16);
+    const g = parseInt(color.substr(2, 2), 16);
+    const b = parseInt(color.substr(4, 2), 16);
+    
+    // Вычисляем яркость
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    
+    return brightness > 128 ? '#000000' : '#ffffff';
+  }
+
   // Получение имени участника по ID
   getMemberName(memberId: number): string {
     const member = this.members().find(m => m.id === memberId);
     return member?.name || 'Неизвестный участник';
+  }
+
+  // Форматирование даты
+  formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
   }
 
   // Редактирование расхода
@@ -857,7 +966,7 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
 
   closeCategoryModal(): void {
     this.showCategoryModal = false;
-    this.categoryForm.reset({ icon: 'receipt' });
+    this.categoryForm.reset({ icon: 'receipt', color: '#3B82F6' });
   }
 
   closeExpenseModal(): void {
@@ -883,41 +992,39 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
     }
 
     // Calculate expenses by category
-    const categoryExpenses = new Map<string, number>();
-    const categoryColors = new Map<string, string>();
+    const categoryExpenses = new Map<string, { amount: number; color: string }>();
     
     // Initialize with categories
     this.categories().forEach(category => {
-      categoryExpenses.set(category.name, 0);
-      categoryColors.set(category.name, this.getRandomColor());
+      categoryExpenses.set(category.name, { amount: 0, color: category.color });
     });
     
     // Add uncategorized
-    categoryExpenses.set('Без категории', 0);
-    categoryColors.set('Без категории', '#9CA3AF');
+    categoryExpenses.set('Без категории', { amount: 0, color: '#9CA3AF' });
 
     // Sum expenses by category
     this.expenses().forEach(expense => {
       if (expense.category_id) {
         const categoryName = this.getCategoryName(expense.category_id);
-        const current = categoryExpenses.get(categoryName) || 0;
-        categoryExpenses.set(categoryName, current + expense.amount);
+        const categoryColor = this.getCategoryColor(expense.category_id);
+        const current = categoryExpenses.get(categoryName) || { amount: 0, color: categoryColor };
+        categoryExpenses.set(categoryName, { amount: current.amount + expense.amount, color: categoryColor });
       } else {
-        const current = categoryExpenses.get('Без категории') || 0;
-        categoryExpenses.set('Без категории', current + expense.amount);
+        const current = categoryExpenses.get('Без категории') || { amount: 0, color: '#9CA3AF' };
+        categoryExpenses.set('Без категории', { amount: current.amount + expense.amount, color: '#9CA3AF' });
       }
     });
 
     // Filter out zero values
-    const filteredEntries = Array.from(categoryExpenses.entries()).filter(([, amount]) => amount > 0);
+    const filteredEntries = Array.from(categoryExpenses.entries()).filter(([, data]) => data.amount > 0);
 
     const config: ChartConfiguration = {
       type: 'doughnut',
       data: {
         labels: filteredEntries.map(([name]) => name),
         datasets: [{
-          data: filteredEntries.map(([, amount]) => amount),
-          backgroundColor: filteredEntries.map(([name]) => categoryColors.get(name) || '#9CA3AF'),
+          data: filteredEntries.map(([, data]) => data.amount),
+          backgroundColor: filteredEntries.map(([, data]) => data.color),
           borderWidth: 2,
           borderColor: '#ffffff'
         }]
@@ -1017,13 +1124,5 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
     };
 
     this.timeChart = new Chart(ctx, config);
-  }
-
-  private getRandomColor(): string {
-    const colors = [
-      '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-      '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
   }
 }

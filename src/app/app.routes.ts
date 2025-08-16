@@ -36,7 +36,7 @@ export const routes: Routes = [
             },
             {
                 path: 'expenses',
-                loadComponent: () => import('./pages/groups/groups.component').then(m => m.GroupsComponent) // Placeholder
+                loadComponent: () => import('./pages/expenses/expenses.component').then(m => m.ExpensesComponent)
             }
         ]
     },

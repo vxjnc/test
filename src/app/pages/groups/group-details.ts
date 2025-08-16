@@ -205,6 +205,38 @@ Chart.register(...registerables);
                 </div>
                 <div>
                   <h3 class="text-sm font-medium text-gray-700 mb-2">Расходы по времени</h3>
+                  <div class="flex space-x-2 mb-4">
+                    <button
+                      (click)="changeTimeChartPeriod('days')"
+                      class="px-3 py-1 text-xs rounded-full transition-colors"
+                      [class.bg-primary-500]="timeChartPeriod === 'days'"
+                      [class.text-white]="timeChartPeriod === 'days'"
+                      [class.bg-gray-200]="timeChartPeriod !== 'days'"
+                      [class.text-gray-700]="timeChartPeriod !== 'days'"
+                    >
+                      Дни
+                    </button>
+                    <button
+                      (click)="changeTimeChartPeriod('weeks')"
+                      class="px-3 py-1 text-xs rounded-full transition-colors"
+                      [class.bg-primary-500]="timeChartPeriod === 'weeks'"
+                      [class.text-white]="timeChartPeriod === 'weeks'"
+                      [class.bg-gray-200]="timeChartPeriod !== 'weeks'"
+                      [class.text-gray-700]="timeChartPeriod !== 'weeks'"
+                    >
+                      Недели
+                    </button>
+                    <button
+                      (click)="changeTimeChartPeriod('months')"
+                      class="px-3 py-1 text-xs rounded-full transition-colors"
+                      [class.bg-primary-500]="timeChartPeriod === 'months'"
+                      [class.text-white]="timeChartPeriod === 'months'"
+                      [class.bg-gray-200]="timeChartPeriod !== 'months'"
+                      [class.text-gray-700]="timeChartPeriod !== 'months'"
+                    >
+                      Месяцы
+                    </button>
+                  </div>
                   <div class="h-64">
                     <canvas #timeChart></canvas>
                   </div>
@@ -542,6 +574,9 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
   submittingCategory = signal(false);
   submittingExpense = signal(false);
   editingExpense: ExpenseInDB | null = null;
+
+  // Chart settings
+  timeChartPeriod: 'days' | 'weeks' | 'months' = 'weeks';
 
   memberForm: FormGroup;
   categoryForm: FormGroup;
@@ -975,6 +1010,11 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
     this.editingExpense = null;
   }
 
+  changeTimeChartPeriod(period: 'days' | 'weeks' | 'months'): void {
+    this.timeChartPeriod = period;
+    this.createTimeChart();
+  }
+
   private initializeCharts(): void {
     if (this.categoryChartRef && this.timeChartRef) {
       this.createCategoryChart();
@@ -1060,30 +1100,60 @@ export class GroupDetailsComponent implements OnInit, AfterViewInit {
       this.timeChart.destroy();
     }
 
-    // Group expenses by month
-    const monthlyExpenses = new Map<string, number>();
+    // Group expenses by selected period
+    const periodExpenses = new Map<string, number>();
     
     this.expenses().forEach(expense => {
       const date = new Date(expense.created_at);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const current = monthlyExpenses.get(monthKey) || 0;
-      monthlyExpenses.set(monthKey, current + expense.amount);
+      let periodKey: string;
+      
+      switch (this.timeChartPeriod) {
+        case 'days':
+          periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          break;
+        case 'weeks':
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          periodKey = `${weekStart.getFullYear()}-W${String(Math.ceil((weekStart.getTime() - new Date(weekStart.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))).padStart(2, '0')}`;
+          break;
+        case 'months':
+          periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          break;
+      }
+      
+      const current = periodExpenses.get(periodKey) || 0;
+      periodExpenses.set(periodKey, current + expense.amount);
     });
 
-    // Sort by date and get last 6 months
-    const sortedEntries = Array.from(monthlyExpenses.entries())
+    // Sort by date and get appropriate number of periods
+    const periodCount = this.timeChartPeriod === 'days' ? 14 : this.timeChartPeriod === 'weeks' ? 12 : 6;
+    const sortedEntries = Array.from(periodExpenses.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-6);
+      .slice(-periodCount);
 
     const config: ChartConfiguration = {
       type: 'line',
       data: {
-        labels: sortedEntries.map(([monthKey]) => {
-          const [year, month] = monthKey.split('-');
-          return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('ru-RU', { 
-            month: 'short', 
-            year: 'numeric' 
-          });
+        labels: sortedEntries.map(([periodKey]) => {
+          switch (this.timeChartPeriod) {
+            case 'days':
+              const [year, month, day] = periodKey.split('-');
+              return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('ru-RU', { 
+                day: 'numeric',
+                month: 'short'
+              });
+            case 'weeks':
+              const [weekYear, weekNum] = periodKey.split('-W');
+              return `${weekNum} нед. ${weekYear}`;
+            case 'months':
+              const [monthYear, monthNum] = periodKey.split('-');
+              return new Date(parseInt(monthYear), parseInt(monthNum) - 1).toLocaleDateString('ru-RU', { 
+                month: 'short', 
+                year: 'numeric' 
+              });
+            default:
+              return periodKey;
+          }
         }),
         datasets: [{
           label: 'Расходы (₽)',

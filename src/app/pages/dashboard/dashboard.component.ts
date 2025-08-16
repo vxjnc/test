@@ -4,7 +4,7 @@ import { RouterModule } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
-import { GroupInDB, ExpenseInDB } from '../../models/api.models';
+import { GroupInDB, ExpenseInDB, GroupMemberInDB } from '../../models/api.models';
 import { LoadingSpinnerComponent } from '../../components/ui/loading-spinner.component';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -63,13 +63,25 @@ import { MatIconModule } from '@angular/material/icon';
               <div class="card">
                 <div class="flex items-center">
                   <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-accent-100 rounded-lg flex items-center justify-center">
-                      <mat-icon class="text-accent-600">attach_money</mat-icon>
+                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                      <mat-icon class="text-red-600">account_balance</mat-icon>
                     </div>
                   </div>
                   <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Общая сумма</p>
-                    <p class="text-2xl font-bold text-gray-900">₽{{ totalAmount().toLocaleString() }}</p>
+                    <p class="text-sm font-medium text-gray-500">Мой долг</p>
+                    <p class="text-2xl font-bold"
+                       [class.text-red-600]="totalUserDebt() > 0"
+                       [class.text-green-600]="totalUserDebt() < 0"
+                       [class.text-gray-900]="totalUserDebt() === 0">
+                      ₽{{ Math.abs(totalUserDebt()).toLocaleString() }}
+                    </p>
+                    @if (totalUserDebt() !== 0) {
+                      <p class="text-xs"
+                         [class.text-red-500]="totalUserDebt() > 0"
+                         [class.text-green-500]="totalUserDebt() < 0">
+                        {{ totalUserDebt() > 0 ? 'Должен' : 'Переплата' }}
+                      </p>
+                    }
                   </div>
                 </div>
               </div>
@@ -146,11 +158,11 @@ import { MatIconModule } from '@angular/material/icon';
                         </div>
                       </div>
                     }
-                  </div>
-                }
-              </div>
-            </div>
-          }
+        // Load groups
+        const groups = await this.apiService.getGroups().toPromise();
+        if (groups) {
+          this.groups.set(groups);
+        }
         </div>
       </div>
     </div>
@@ -183,41 +195,86 @@ export class DashboardComponent implements OnInit {
                 this.groups.set(groups);
             }
 
-            // Load expenses for all groups
-            let allExpenses: ExpenseInDB[] = [];
-            for (const group of this.groups()) {
-                try {
-                    const expenses = await this.apiService.getExpenses(group.id).toPromise();
-                    if (expenses) {
-                        allExpenses = [...allExpenses, ...expenses];
-                    }
+        // Load expenses and members for all groups
+        let allExpenses: ExpenseInDB[] = [];
+        const membersMap = new Map<string, GroupMemberInDB[]>();
+        
+        for (const group of this.groups()) {
+          try {
+            const [expenses, members] = await Promise.all([
+              this.apiService.getExpenses(group.id).toPromise(),
+              this.apiService.getGroupMembers(group.id).toPromise()
+            ]);
+            
+            if (expenses) {
+              allExpenses = [...allExpenses, ...expenses];
                 }
-                catch (error) {
-                    console.error(`Failed to load expenses for group ${group.id}:`, error);
-                }
+            if (members) {
+              membersMap.set(group.id, members);
             }
-
-            this.allExpenses.set(allExpenses);
-
-            // Calculate stats
-            const activeExpenses = allExpenses.filter(expense => !expense.is_settled);
-            this.activeExpensesCount.set(activeExpenses.length);
-            this.totalAmount.set(allExpenses.reduce((sum, expense) => sum + expense.amount, 0));
-
-            // Get recent expenses (last 5)
-            const sortedExpenses = allExpenses
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                .slice(0, 5);
-            this.recentExpenses.set(sortedExpenses);
-
+          } catch (error) {
+            console.error(`Failed to load data for group ${group.id}:`, error);
+            }
         }
-        catch (error) {
-            console.error('Failed to load dashboard data:', error);
-            this.toast.error('Ошибка загрузки данных');
-        }
-        finally {
-            this.loading.set(false);
-        }
+
+        this.allExpenses.set(allExpenses);
+        this.allMembers.set(membersMap);
+
+        // Calculate stats
+        const activeExpenses = allExpenses.filter(expense => !expense.is_settled);
+        this.activeExpensesCount.set(activeExpenses.length);
+        
+        // Calculate user's total debt across all groups
+        this.calculateUserDebt();
+
+        // Get recent expenses (last 5)
+        const sortedExpenses = allExpenses
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5);
+        this.recentExpenses.set(sortedExpenses);
+
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+        this.toast.error('Ошибка загрузки данных');
+      } finally {
+        this.loading.set(false);
+      }
+    }
+
+    private calculateUserDebt(): void {
+      const currentUserId = this.authService.currentUser()?.id;
+      if (!currentUserId) return;
+
+      let totalDebt = 0;
+
+      // Calculate debt for each group
+      this.allMembers().forEach((members, groupId) => {
+        const userMember = members.find(m => m.user_id === currentUserId);
+        if (!userMember) return;
+
+        const groupExpenses = this.allExpenses().filter(e => e.group_id === groupId);
+        
+        groupExpenses.forEach(expense => {
+          const userShare = expense.shares.find(s => s.member_id === userMember.id);
+          if (userShare && !userShare.is_paid) {
+            let shareAmount = 0;
+            
+            if (userShare.share && userShare.share > 0) {
+              shareAmount = userShare.share;
+            } else {
+              // Equal split among participants without custom shares
+              const totalCustomShares = expense.shares.reduce((sum, share) => sum + (share.share || 0), 0);
+              const remainingAmount = expense.amount - totalCustomShares;
+              const sharesWithoutCustomAmount = expense.shares.filter(s => !s.share || s.share === 0).length;
+              shareAmount = sharesWithoutCustomAmount > 0 ? remainingAmount / sharesWithoutCustomAmount : 0;
+            }
+            
+            totalDebt += shareAmount;
+          }
+        });
+      });
+
+      this.totalUserDebt.set(totalDebt);
     }
 
     formatDate(dateString: string): string {
